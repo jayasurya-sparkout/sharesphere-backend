@@ -1,9 +1,10 @@
 import express from "express";
 import Product from "../models/product.js";
+import mongoose from "mongoose";
 
 const router = express.Router();
 
-// ✅ Create a new product
+// Create a new product
 router.post("/", async (req, res) => {
     try {
         const { userId, name, description, price, category, imageUrl, stock, isAvailable } = req.body;
@@ -31,7 +32,7 @@ router.post("/", async (req, res) => {
     }
 });
 
-// ✅ Edit / Update a product
+// Edit / Update a product
 router.put("/:id", async (req, res) => {
     try {
         const updateProduct = await Product.findByIdAndUpdate(
@@ -51,7 +52,7 @@ router.put("/:id", async (req, res) => {
     }
 });
 
-// ✅ View All Products
+// View All Products
 router.get("/", async (req, res) => {
     try {
         const products = await Product.find().populate("createdBy", "name email");
@@ -61,7 +62,7 @@ router.get("/", async (req, res) => {
     }
 });
 
-// ✅ View All Products Created By Others (no userId needed)
+// View All Products Created By Others (no userId needed)
 router.get("/others", async (req, res) => {
     try {
         const products = await Product.find().populate("createdBy", "name email");
@@ -77,7 +78,7 @@ router.get("/others", async (req, res) => {
     }
 });
 
-// ✅ View Only Products Created By Me
+// View Only Products Created By Me
 router.get("/my-products/:userId", async (req, res) => {
     try {
         const { userId } = req.params;
@@ -94,10 +95,15 @@ router.get("/my-products/:userId", async (req, res) => {
     }
 });
 
-// ✅ View Only Products Created By Others (exclude one user)
+// View Only Products Created By Others (exclude one user)
 router.get("/others/:userId", async (req, res) => {
     try {
         const { userId } = req.params;
+
+        if (!mongoose.Types.ObjectId.isValid(userId)) {
+            return res.status(400).json({ message: "Please enter a valid User ID" });
+        }
+
         const products = await Product.find({ createdBy: { $ne: userId } }).populate("createdBy", "name email");
 
         if (!products || products.length === 0) {
@@ -111,7 +117,7 @@ router.get("/others/:userId", async (req, res) => {
     }
 });
 
-// ✅ View Single Product (keep this **last** so it doesn’t catch `/others`)
+// View Single Product (keep this **last** so it doesn’t catch `/others`)
 router.get("/:id", async (req, res) => {
     try {
         const product = await Product.findById(req.params.id).populate("createdBy", "name email");

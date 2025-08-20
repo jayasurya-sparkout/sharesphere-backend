@@ -18,7 +18,7 @@ export const register = async (req, res) => {
       expiresIn: "1d",
     });
 
-    res.status(201).json({ token, email: user.email, name: user.name });
+    res.status(201).json({ token, email: user.email, name: user.name, userId: user._id });
   } catch (error) {
     res.status(500).json({ message: "Server error" });
   }
@@ -38,7 +38,7 @@ export const login = async (req, res) => {
       expiresIn: "1d",
     });
 
-    res.status(200).json({ token, email: user.email, name: user.name });
+    res.status(200).json({ token, email: user.email, name: user.name, userId: user._id });
   } catch (error) {
     res.status(500).json({ message: "Server error" });
   }

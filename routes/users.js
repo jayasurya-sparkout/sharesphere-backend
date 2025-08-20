@@ -1,5 +1,6 @@
 import express from "express";
 import User from "../models/user.js";
+import mongoose from "mongoose";
 
 const router = express.Router();
 
@@ -12,8 +13,6 @@ router.get("/", async (req, res) => {
         res.status(500).json({ message: "Error fetching users", error: error.message });
     }
 });
-
-import mongoose from "mongoose";
 
 router.get("/:id", async (req, res) => {
     try {
