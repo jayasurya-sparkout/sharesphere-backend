@@ -1,35 +1,50 @@
 import express from "express";
 import Product from "../models/product.js";
 import mongoose from "mongoose";
+import s3 from "../s3.js";
+import multer from "multer";
 
 const router = express.Router();
+const storage = multer.memoryStorage();
+const upload = multer({ storage });
 
 // Create a new product
-router.post("/", async (req, res) => {
-    try {
-        const { userId, name, description, price, category, imageUrl, stock, isAvailable } = req.body;
+router.post("/", upload.array("imageUrl", 5), async (req, res) => {
+  try {
+    const { userId, name, description, price, category, stock } = req.body;
 
-        if (!userId) {
-            return res.status(400).json({ message: "User ID is required" });
-        }
+    if (!userId) return res.status(400).json({ message: "User ID required" });
 
-        const product = new Product({
-            name,
-            description,
-            price,
-            category,
-            imageUrl,
-            stock,
-            isAvailable,
-            createdBy: userId
-        });
+    const imageUrls = await Promise.all(
+      req.files.map(async (file) => {
+        const params = {
+          Bucket: process.env.AWS_BUCKET_NAME,
+          Key: Date.now() + "-" + file.originalname,
+          Body: file.buffer,
+          ContentType: file.mimetype,
+        };
 
-        const savedProduct = await product.save();
-        res.status(201).json(savedProduct);
+        const data = await s3.upload(params).promise();
+        return data.Location;
+      })
+    );
 
-    } catch (error) {
-        res.status(400).json({ message: "Error creating product", error: error.message });
-    }
+    const product = new Product({
+      name,
+      description,
+      price,
+      category,
+      stock,
+      imageUrl: imageUrls,
+      createdBy: userId,
+    });
+
+    const savedProduct = await product.save();
+    res.status(201).json(savedProduct);
+
+  } catch (error) {
+    res.status(400).json({ message: "Error creating product", error: error.message });
+  }
 });
 
 // Edit / Update a product
@@ -68,7 +83,7 @@ router.get("/others", async (req, res) => {
         const products = await Product.find().populate("createdBy", "name email");
 
         if (!products || products.length === 0) {
-            return res.status(404).json({ message: "No products found from other users" });
+            return res.status(200).json({ message: "No products found from other users" });
         }
 
         res.json(products);
@@ -85,7 +100,7 @@ router.get("/my-products/:userId", async (req, res) => {
         const products = await Product.find({ createdBy: userId }).populate("createdBy", "name email");
 
         if (!products || products.length === 0) {
-            return res.status(404).json({ message: "No products found for this user" });
+            return res.status(200).json({ message: "No products found for this user" });
         }
 
         res.json(products);
@@ -107,7 +122,7 @@ router.get("/others/:userId", async (req, res) => {
         const products = await Product.find({ createdBy: { $ne: userId } }).populate("createdBy", "name email");
 
         if (!products || products.length === 0) {
-            return res.status(404).json({ message: "No products found from other users" });
+            return res.status(200).json({ message: "No products found from other users" });
         }
 
         res.json(products);
